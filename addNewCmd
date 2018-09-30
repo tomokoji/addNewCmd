@@ -1,0 +1,146 @@
+#!/bin/bash
+
+# *************************************************************************
+#                        a d d N e w C o m m a n d
+# -------------------------------------------------------------------------
+# This script is to add a given directory path to the environemnt variable
+# $PATH and add new command file to the directtory.
+#
+# Author: tomokoji
+# Created on: 30 Sep 2018
+# *************************************************************************
+
+# -------------------------------------------------------------------------
+# Define variables.
+# COLOR CODE
+#   30: Black   31: Red     32: Green   33: Yellow  34: Blue
+#   35: Magenta 36: Cyan    37: White
+# -------------------------------------------------------------------------
+myCOLOR="34m"
+
+COLOR="\033[${myCOLOR}"
+BOLD="\033[1;${myCOLOR}"
+NONBOLD="\033[0;${myCOLOR}"
+DEFAULT="\033[0m"
+
+bar=\
+"-------------------------------------------------------------------------"
+echo -e "${COLOR}${bar}"
+escape="echo -e \"\${bar}\${DEFAULT}\"; exit"
+
+dir_path="/usr/local"
+dir_name="custom_command"
+
+# -------------------------------------------------------------------------
+# Check the arguments.
+# -------------------------------------------------------------------------
+if [[ ${1} != "" ]] ; then
+    cmd_name=$1
+else
+    echo "[WARNING] This command requires 1 argument but 0 were given:"
+    echo "   $ ${0##*/} <cmd_name> <option: dir_path> <option: dir_name>"
+    echo ""
+    echo "   * cmd_name: The name of the command to be added."
+    echo -n "   * dir_path: The absolute path of the directory where a "
+    echo "new command is added."
+    echo "               The default path is <${dir_path}>."
+    echo -n "   * dir_name: The name of the directory where a new command "
+    echo -e "is added."
+    echo "               The directory will be created if it doesn't exist."
+    echo "               The default directory is <${dir_name}>."
+
+    eval ${escape}
+fi
+
+# -------------------------------------------------------------------------
+# Check if the command file exist.
+# -------------------------------------------------------------------------
+if [ ${cmd_name:0:1} != "/" ]; then
+    cmd_path=`pwd`/${cmd_name}
+else
+    cmd_path=${cmd_name}
+fi
+
+if [ ! -e ${cmd_path} ]; then
+    if [ -e ${cmd_path}.sh ]; then
+        cmd_path=${cmd_path}.sh
+    else
+        echo "[WARNING] A file for the command ${cmd_name} does not exist."
+        eval ${escape}
+    fi
+fi
+
+# -------------------------------------------------------------------------
+# Check the path and name of the directory where a new command is added.
+# -------------------------------------------------------------------------
+if [[ ${2} != "" ]] ; then
+    dir_path=$2
+fi
+if [[ ${3} != "" ]] ; then
+    dir_name=$3
+fi
+
+if [ ! -e ${dir_path} ]; then
+    echo "[WARNING] A directory ${dir_path} does not exist."
+    eval ${escape}
+fi
+
+dir_path=${dir_path%*/}/${dir_name}
+
+if [ ! -e ${dir_path} ]; then
+    echo ">>> A directory ${dir_path} does not exist."
+    read -p ">>> Will you make a directory ${dir_path}? [y/n]: " VAR
+
+    if [[ ${VAR} = "y" ]] || [[ ${VAR} = "Y" ]] ; then
+        sudo mkdir ${dir_path}
+        echo "[ O  K ] ${dir_name} is created."
+    else
+        eval ${escape}
+    fi
+fi
+
+# -------------------------------------------------------------------------
+# Add the directry path to environemnt variable PATH when it is not
+# included.
+# -------------------------------------------------------------------------
+path_check=`grep ${dir_path} ~/.bash_profile`
+if [[ $path_check = "" ]]; then
+    echo ">>> ${dir_path} is not found in the environemnt variable \$PATH."
+    read -p ">>> Will you add ${dir_path} to \$PATH? [y/n]: " VAR
+
+    if [[ ${VAR} = "y" ]] || [[ ${VAR} = "Y" ]] ; then
+        echo "export PATH=\$PATH:${dir_path}" >> ~/.bash_profile
+        source ~/.bash_profile
+        echo "${dir_name} is added to \$PATH."
+    fi
+fi
+
+# -------------------------------------------------------------------------
+# Final confirmation to add a command.
+# -------------------------------------------------------------------------
+echo -ne ">>> The new command file <${cmd_path}> will be "
+echo -e "added to <${dir_path}>."
+read -p ">>> Enter y/Y [OK] or n/N [Cancel]: " VAR
+
+if [[ ${VAR} != "y" ]] && [[ ${VAR} != "Y" ]] ; then
+    eval ${escape}
+fi
+
+sudo cp ${cmd_path} ${dir_path}/
+
+echo "The command file ${cmd_name} is copied to ${dir_path}."
+read -p ">>> Do you remove the original file ${cmd_path}? [y/n]: " VAR
+
+if [[ ${VAR} = "y" ]] || [[ ${VAR} = "Y" ]] ; then
+    rm ${cmd_path}
+fi
+
+eval ${escape}
+
+# *************************************************************************
+# ACKNOWLEDGEMENT
+# -------------------------------------------------------------------------
+# This script was written in reference to the followings:
+# [1] "Linux de dokuji command wo sakusei/tsuika suru oboegaki", Qiita,
+#     https://qiita.com/CyberMergina/items/57ba95d777e8f3389a93
+# *************************************************************************
